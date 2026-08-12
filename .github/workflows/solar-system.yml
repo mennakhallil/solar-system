@@ -20,5 +20,7 @@ jobs:
       - name: install npm
         run: npm install
       - name: run unit test
+        env:
+          MONGO_URI: ${{ vars.MONGO_URI }}
         run: npm test
      
