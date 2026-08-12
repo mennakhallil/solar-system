@@ -6,18 +6,17 @@ on:
   pull_request:
     branches:
       - develop
-strategy:
-  matrix:
-    node-version: [22,24]
-    os: [ubuntu-latest , macos-latest]
 env:
   MONGO_URI: ${{ vars.MONGO_URI }}
   MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
   MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
 jobs:
   unit-tests:
+    strategy:
+      matrix:
+        node-version: [22,24]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-  
     environment: solar-system
     steps:
       - name: Checkout code
