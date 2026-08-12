@@ -97,6 +97,8 @@ jobs:
           MONGO_URI: ${{ vars.MONGO_URI }}
           MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
           MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+          DOCKERS_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
          chmod +x ./docker-script.sh
          ./docker-script.sh

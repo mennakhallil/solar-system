@@ -2,10 +2,10 @@
 set -e
 docker image ls
 docker run -d --name solar-system \
--e MONGO_URI=${{ vars.MONGO_URI }} \
--e MONGO_USERNAME=${{ vars.MONGO_USERNAME }} \
--e MONGO_PASSWORD=${{ secrets.MONGO_PASSWORD }} \
-${{ secrets.DOCKER_USERNAME }}/solar-system:${{ github.sha }}
+-e MONGO_URI=$MONGO_URI \
+-e MONGO_USERNAME=$MONGO_USERNAME \
+-e MONGO_PASSWORD=$MONGO_PASSWORD \
+$DOCKERS_USERNAME/solar-system:$GITHUB_SHA
 sleep 10
 docker ps -a
 docker logs solar-system
