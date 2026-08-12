@@ -19,6 +19,6 @@ jobs:
           node-version: 24
       - name: install npm
         run: npm install
-      - name: run unit tests
+      - name: run unit test
         run: npm test
      
