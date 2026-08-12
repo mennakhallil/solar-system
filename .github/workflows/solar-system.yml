@@ -24,11 +24,10 @@ jobs:
       - name: install npm
         run: npm install
       - name: run unit test
-        if: always()
         run: npm test
       - name: upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7.0.1
         with:
           name: test-results
           path: test-results.xml
