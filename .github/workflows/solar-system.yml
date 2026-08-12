@@ -6,11 +6,13 @@ on:
   pull_request:
     branches:
       - develop
-
+env:
+  MONGO_URI: ${{ vars.MONGO_URI }}
+  MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
+  MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    environment: solar-system
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -22,9 +24,5 @@ jobs:
         run: npm install
       - name: run unit test
         if: always()
-        env:
-          MONGO_URI: ${{ vars.MONGO_URI }}
-          MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
-          MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
         run: npm test
      
