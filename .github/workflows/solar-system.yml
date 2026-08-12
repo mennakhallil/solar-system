@@ -56,8 +56,8 @@ jobs:
       - name: run code coverage
         run: npm run coverage
       - name: upload code coverage results
-        if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7.0.1
         with:
           name: code-coverage-results
-          path: code-coverage-results.xml
+          path: coverage
