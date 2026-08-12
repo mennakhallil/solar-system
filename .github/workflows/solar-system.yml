@@ -35,3 +35,28 @@ jobs:
         with:
           name: test-results
           path: test-results.xml
+
+  code-covarage:
+    strategy:
+      matrix:
+        node-version: [22,24]
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    environment: solar-system
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: install npm
+        run: npm install
+      - name: run code coverage
+        run: npm run coverage
+      - name: upload code coverage results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: code-coverage-results
+          path: code-coverage-results.xml
