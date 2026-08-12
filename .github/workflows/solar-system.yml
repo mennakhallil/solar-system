@@ -89,6 +89,13 @@ jobs:
         run: docker build -t solar-system .
       - name: docker run 
         run: docker run -d -p 3000:3000 solar-system 
+      - name: test docker image
+        run: |
+          sleep 10
+          curl -f http://localhost:3000 || exit 1
+      - name : docker tag 
+        run: docker tag solar-system ${{ secrets.DOCKER_USERNAME }}/solar-system:latest     
+
       - name: push docker image to docker hub
-        run: docker push solar-system
+        run: docker push ${{ secrets.DOCKER_USERNAME }}/solar-system:latest
            
