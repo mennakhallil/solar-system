@@ -1,4 +1,4 @@
-bin/bash
+#!/bin/bash
 set -e
 docker image ls
 docker run -d --name solar-system \
