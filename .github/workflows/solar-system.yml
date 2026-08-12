@@ -6,13 +6,18 @@ on:
   pull_request:
     branches:
       - develop
+strategy:
+  matrix:
+    node-version: [22,24]
+    os: [ubuntu-latest , macos-latest]
 env:
   MONGO_URI: ${{ vars.MONGO_URI }}
   MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
   MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
 jobs:
   unit-tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+  
     environment: solar-system
     steps:
       - name: Checkout code
@@ -20,7 +25,7 @@ jobs:
       - name: setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 24
+          node-version: ${{ matrix.node-version }}
       - name: install npm
         run: npm install
       - name: run unit test
