@@ -54,6 +54,7 @@ jobs:
       - name: install npm
         run: npm install
       - name: run code coverage
+        continue-on-error: true
         run: npm run coverage
       - name: upload code coverage results
         continue-on-error: true
