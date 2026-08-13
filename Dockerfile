@@ -1,7 +1,9 @@
-FROM node:18
+FROM node:18-alpine3.17
 WORKDIR /app
 COPY package*.json ./
-RUN npm install --no-save chai@4.3.10 chai-http@4.4.0 mocha@10.2.0
-COPY . .
+RUN npm install 
+ENV MONGO_URI='mongodb+srv://supercluster.d83jj.mongodb.net/superData'
+ENV MONGO_USERNAME=superuser 
+ENV MONGO_PASSWORD=SuperPassword
 EXPOSE 3000
 CMD ["npm", "start"]
