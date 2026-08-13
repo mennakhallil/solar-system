@@ -21,7 +21,6 @@ output "nat_gateway_ids" {
 
   value = {
     nat-1 = module.nat_gateway[0].nat_gateway_id
-    nat-2 = module.nat_gateway[1].nat_gateway_id
   }
 }
 
@@ -43,6 +42,5 @@ output "private_route_table_ids" {
   description = "Private route table IDs"
   value = {
     private-1 = module.private_route_table[0].private_route_table_id
-    private-2 = module.private_route_table[1].private_route_table_id
   }
 }

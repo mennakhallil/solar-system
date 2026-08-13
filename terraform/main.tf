@@ -45,7 +45,7 @@ module "internet_gateway" {
 module "elastic_ip" {
   source = "./modules/elastic-ip"
 
-  count = 2
+  count = 1
 
   aws_eip_name = "solar-eip-${count.index + 1}"
 }
@@ -58,7 +58,7 @@ module "elastic_ip" {
 module "nat_gateway" {
   source = "./modules/nat-gatway"
 
-  count = 2
+  count = 1
 
   eip_allocation_id = module.elastic_ip[count.index].allocation_id
 
@@ -88,7 +88,7 @@ module "public_route_table" {
 module "private_route_table" {
   source = "./modules/route-table"
 
-  count = 2
+  count = 1
 
   vpc_id                   = module.vpc.vpc_id
   public_route_table_name  = "solar-public-route-table-${count.index + 1}"
