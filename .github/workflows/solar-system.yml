@@ -167,9 +167,27 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+      - name: create eks cluster
+        run: |
+            eksctl create cluster \
+            --name solar-system-cluster \
+            --region us-east-1
+            --vpc-public-subnets "$PUBLIC_SUBNETS" \
+            --vpc-private-subnets "$PRIVATE_SUBNETS" \
+            --nodegroup-name solar-system-nodes \
+            --node-type t3.medium \
+            --nodes 2 \
+            --nodes-min 1 \
+            --nodes-max 3 \
+            --managed
+
       - name: get kubeconfig
         run: |
-          aws eks update-kubeconfig --region us-east-1
+          mkdir -p ~/.kube
+
+          aws eks update-kubeconfig --name solar-system-cluster  --region us-east-1
+      - name: Check EKS
+        run: kubectl get nodes
       - name: deploy to kubernetes
         run: |
           kubectl apply -f ./k8s/deployment.yaml
