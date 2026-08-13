@@ -169,7 +169,7 @@ jobs:
           aws-region: us-east-1
       - name: get kubeconfig
         run: |
-          aws eks update-kubeconfig --name solar-system-cluster --region us-east-1
+          aws eks update-kubeconfig --region us-east-1
       - name: deploy to kubernetes
         run: |
           kubectl apply -f ./k8s/deployment.yaml
