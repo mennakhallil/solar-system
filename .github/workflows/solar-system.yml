@@ -138,6 +138,14 @@ jobs:
         run: |
             terraform init
             terraform destroy -auto-approve
+
+      - name: terraform clean
+        run: |
+          rm -rf .terraform
+          rm -f terraform.tfstate
+          rm -f terraform.tfstate.backup
+          chmod +x ./destroy.sh
+          ./destroy.sh
       - name: terraform apply
         working-directory: ./terraform
         run: terraform apply -auto-approve
