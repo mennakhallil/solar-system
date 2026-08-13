@@ -102,3 +102,55 @@ jobs:
         run: |
          chmod +x ./docker-script.sh
          ./docker-script.sh
+  terraform:
+    name: Terraform
+    needs: docker
+    runs-on: ubuntu-latest
+    environment: solar-system
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.14.6"
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: terraform init
+        working-directory: ./terraform
+        run: terraform init
+      - name: terraform plan
+        working-directory: ./terraform
+        run: terraform plan
+      - name: terraform apply
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
+  k8s:
+    name: Deploy to Kubernetes
+    needs: terraform
+    runs-on: ubuntu-latest
+    environment: solar-system
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: get kubeconfig
+        run: |
+          aws eks update-kubeconfig --name solar-system-cluster --region us-east-1
+      - name: deploy to kubernetes using helm
+        run: |
+          helm upgrade --install solar-system ./k8s/helm-chart --namespace solar-system --create-namespace --set image.repository=${{ secrets.DOCKER_USERNAME }}/solar-system,image.tag=${{ github.sha }}        
+
