@@ -93,6 +93,7 @@ module "private_route_table" {
   vpc_id                   = module.vpc.vpc_id
   public_route_table_name  = "solar-public-route-table-${count.index + 1}"
   internet_gateway_id      = module.internet_gateway.aws_internet_gateway_name_id
+  nat_gateway_id           = module.nat_gateway[count.index].nat_gateway_id
   private_route_table_name = "solar-private-route-table-${count.index + 1}"
 }
 

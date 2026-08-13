@@ -3,4 +3,8 @@ solar-system.png
 .nyc_output
 .talismanrc
 coverage
-test-results.xml.terraform
+test-results.xml
+.terraform
+terraform/.terraform.lock.hcl
+terraform/tfplan
+*.tfplan
