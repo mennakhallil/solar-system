@@ -150,7 +150,8 @@ jobs:
       - name: get kubeconfig
         run: |
           aws eks update-kubeconfig --name solar-system-cluster --region us-east-1
-      - name: deploy to kubernetes using helm
+      - name: deploy to kubernetes
         run: |
-          helm upgrade --install solar-system ./k8s/helm-chart --namespace solar-system --create-namespace --set image.repository=${{ secrets.DOCKER_USERNAME }}/solar-system,image.tag=${{ github.sha }}        
+          kubectl apply -f ./k8s/deployment.yaml
+          kubectl apply -f ./k8s/service.yaml
 
