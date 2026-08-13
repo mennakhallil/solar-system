@@ -14,4 +14,4 @@ export DOCKER_CONTAINER_ID=$(docker ps -q -f name=solar-system)
 export IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' solar-system)
 echo $IP
 echo testing image url using wget
-wget -q -o 127.0.0.1:3000/live | grep live
+wget -q -o http://127.0.0.1:3000/live | grep live
