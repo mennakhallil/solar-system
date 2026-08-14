@@ -178,7 +178,7 @@ jobs:
         run: |
             eksctl create cluster \
             --name solar-system-cluster \
-            --region us-east-1
+            --region us-east-1 \
             --vpc-public-subnets "$PUBLIC_SUBNETS" \
             --vpc-private-subnets "$PRIVATE_SUBNETS" \
             --nodegroup-name solar-system-nodes \
