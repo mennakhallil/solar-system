@@ -177,11 +177,11 @@ jobs:
       - name: create eks cluster
         run: |
             eksctl create cluster \
-            --name solar-system-cluster \
+            --name solar-cluster \
             --region us-east-1 \
             --vpc-public-subnets "$PUBLIC_SUBNETS" \
             --vpc-private-subnets "$PRIVATE_SUBNETS" \
-            --nodegroup-name solar-system-nodes \
+            --nodegroup-name solar-nodes \
             --node-type t3.medium \
             --nodes 2 \
             --nodes-min 1 \
@@ -192,7 +192,7 @@ jobs:
         run: |
           mkdir -p ~/.kube
 
-          aws eks update-kubeconfig --name solar-system-cluster  --region us-east-1
+          aws eks update-kubeconfig --name solar-cluster  --region us-east-1
       - name: Check EKS
         run: kubectl get nodes
       - name: deploy to kubernetes
