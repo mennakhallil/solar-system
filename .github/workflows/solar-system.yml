@@ -182,7 +182,7 @@ jobs:
             --vpc-public-subnets "$PUBLIC_SUBNETS" \
             --vpc-private-subnets "$PRIVATE_SUBNETS" \
             --nodegroup-name solar-nodes \
-            --node-type t3.medium \
+            --node-type t3.micro \
             --nodes 2 \
             --nodes-min 1 \
             --nodes-max 3 \
