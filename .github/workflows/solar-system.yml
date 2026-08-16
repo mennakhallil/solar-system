@@ -201,13 +201,11 @@ jobs:
               export REPLICAS="${{ vars.REPLICAS }}"
               export NAMESPACE="${{ vars.NAMESPACE }}"
               export K8S_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/solar-system:${GITHUB_SHA}"
-              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+     # kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
               envsubst < ./kubernetes/development/deployment.yaml > /tmp/deployment.yaml
               envsubst < ./kubernetes/development/service.yaml > /tmp/service.yaml
-              envsubst < ./kubernetes/development/ingress.yaml > /tmp/ingress.yaml
-              cat /tmp/deployment.yaml
               kubectl apply -f /tmp/deployment.yaml
               kubectl apply -f /tmp/service.yaml
-              kubectl apply -f /tmp/ingress.yaml
+             
 
 
