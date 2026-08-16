@@ -199,5 +199,5 @@ jobs:
         run: |
           kubectl apply -f ./kubernetes/development/deployment.yaml
           kubectl apply -f ./kubernetes/development/service.yaml
-          kubectl apply -f ./kubernetes/development/ingress.yaml
+         
 
