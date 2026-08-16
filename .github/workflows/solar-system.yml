@@ -200,8 +200,7 @@ jobs:
         run: |
               export REPLICAS="${{ vars.REPLICAS }}"
               export NAMESPACE="${{ vars.NAMESPACE }}"
-              export K8S_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/solar-system:${GITHUB_SHA}
-
+              export K8S_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/solar-system:${GITHUB_SHA}"
               envsubst < ./kubernetes/development/deployment.yaml > /tmp/deployment.yaml
               envsubst < ./kubernetes/development/service.yaml > /tmp/service.yaml
               kubectl apply -f /tmp/deployment.yaml
