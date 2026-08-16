@@ -195,9 +195,25 @@ jobs:
           aws eks update-kubeconfig --name solar-cluster  --region us-east-1
       - name: Check EKS
         run: kubectl get nodes
+
       - name: deploy to kubernetes
+      
+        env:
+          REPLICAS: ${{ vars.REPLICAS }}
+          NAMESPACE: ${{ vars.NAMESPACE }}
+          K8S_IMAGE: ${{ vars.K8S_IMAGE }}
         run: |
-          kubectl apply -f ./kubernetes/development/deployment.yaml
-          kubectl apply -f ./kubernetes/development/service.yaml
+              export REPLICAS="${{ vars.REPLICAS }}"
+              export NAMESPACE="${{ vars.NAMESPACE }}"  
+              export K8S_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/solar-system:${GITHUB_SHA}"
+              envsubst < ./kubernetes/development/deployment.yaml > /tmp/deployment.yaml
+              envsubst < ./kubernetes/development/service.yaml > /tmp/service.yaml
+              envsubst < ./kubernetes/development/ingress.yaml > /tmp/ingress.yaml
+
+               cat /tmp/deployment.yaml
+ 
+               kubectl apply -f /tmp/deployment.yaml
+               kubectl apply -f /tmp/service.yaml
+               kubectl apply -f /tmp/ingress.yaml           
          
 
