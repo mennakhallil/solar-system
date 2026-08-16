@@ -4,9 +4,9 @@ metadata:
   labels:
     app: solar-system
   name: solar-system
-  namespace: ${vars.NAMESPACE}
+  namespace: ${NAMESPACE}
 spec:
-  replicas: ${vars.REPLICAS}
+  replicas: ${REPLICAS}
   selector:
     matchLabels:
       app: solar-system
