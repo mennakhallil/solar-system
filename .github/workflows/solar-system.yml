@@ -14,7 +14,7 @@ env:
   dockerhub_password: ${{ secrets.DOCKER_PASSWORD }}
 jobs:
   unit-tests:
-    name: Run unit tests  
+    name: Run unit tests
     strategy:
       matrix:
         node-version: [16, 18]
@@ -132,23 +132,6 @@ jobs:
       - name: terraform fmt
         working-directory: ./terraform
         run: terraform fmt -check
-        
-      # - name: Terraform Destroy
-      #   working-directory: ./terraform
-      #   run: |
-      #       terraform init
-      #       terraform destroy -auto-approve
-
-      # - name: terraform clean
-      #   run: |
-      #     rm -rf .terraform
-      #     rm -f terraform.tfstate
-      #     rm -f terraform.tfstate.backup
-      #     chmod +x ./destroy.sh
-      # #     ./destroy.sh
-      # - name: terraform apply
-      #   working-directory: ./terraform
-      #   run: terraform apply -auto-approve
   k8s:
     name: Deploy to Kubernetes
     needs: terraform
@@ -168,25 +151,25 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # - name: Install eksctl
-      #   run: |
-      #         curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
-      #         sudo mv /tmp/eksctl /usr/local/bin/eksctl
-      #         eksctl version
+      - name: Install eksctl
+        run: |
+              curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
+              sudo mv /tmp/eksctl /usr/local/bin/eksctl
+              eksctl version
 
-      # - name: create eks cluster
-      #   run: |
-      #       eksctl create cluster \
-      #       --name solar-cluster \
-      #       --region us-east-1 \
-      #       --vpc-public-subnets "$PUBLIC_SUBNETS" \
-      #       --vpc-private-subnets "$PRIVATE_SUBNETS" \
-      #       --nodegroup-name solar-nodes \
-      #       --node-type t3.micro \
-      #       --nodes 2 \
-      #       --nodes-min 1 \
-      #       --nodes-max 3 \
-      #       --managed
+      - name: create eks cluster
+        run: |
+            eksctl create cluster \
+            --name solar-cluster \
+            --region us-east-1 \
+            --vpc-public-subnets "$PUBLIC_SUBNETS" \
+            --vpc-private-subnets "$PRIVATE_SUBNETS" \
+            --nodegroup-name solar-nodes \
+            --node-type t3.micro \
+            --nodes 2 \
+            --nodes-min 1 \
+            --nodes-max 3 \
+            --managed
 
       - name: get kubeconfig
         run: |
@@ -195,12 +178,19 @@ jobs:
           aws eks update-kubeconfig --name solar-cluster  --region us-east-1
       - name: Check EKS
         run: kubectl get nodes
+      
+      - name: create namespace
+        run: |
+              export NAMESPACE="${{ vars.NAMESPACE }}"
+              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f  
+              
 
       - name: deploy to kubernetes
         run: |
               export REPLICAS="${{ vars.REPLICAS }}"
               export NAMESPACE="${{ vars.NAMESPACE }}"
               export K8S_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/solar-system:${GITHUB_SHA}"
+              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f
               envsubst < ./kubernetes/development/deployment.yaml > /tmp/deployment.yaml
               envsubst < ./kubernetes/development/service.yaml > /tmp/service.yaml
               kubectl apply -f /tmp/deployment.yaml
