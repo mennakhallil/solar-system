@@ -1,0 +1,269 @@
+REGI
+بستخدم السكريبت ده كامل علي بعضه علشان امسح كل حاجه تم انشاءها علي الحساب بتاعي
+
+
+
+ON=us-east-1
+
+# ==============================
+# 1. Delete EKS clusters
+# ==============================
+for cluster in $(aws eks list-clusters \
+  --region "$REGION" \
+  --query 'clusters[]' \
+  --output text); do
+
+  echo "Deleting EKS cluster: $cluster"
+
+  aws eks delete-cluster \
+    --name "$cluster" \
+    --region "$REGION" 2>/dev/null || true
+done
+
+
+# ==============================
+# 2. Delete eksctl CloudFormation stacks
+# ==============================
+for stack in $(aws cloudformation list-stacks \
+  --region "$REGION" \
+  --query "StackSummaries[?contains(StackName,'eksctl-') && StackStatus!='DELETE_COMPLETE'].StackName" \
+  --output text); do
+
+  echo "Deleting stack: $stack"
+
+  aws cloudformation update-termination-protection \
+    --stack-name "$stack" \
+    --no-enable-termination-protection \
+    --region "$REGION" 2>/dev/null || true
+
+  aws cloudformation delete-stack \
+    --stack-name "$stack" \
+    --region "$REGION" 2>/dev/null || true
+done
+
+
+# ==============================
+# 3. Delete Load Balancers
+# ==============================
+for lb in $(aws elbv2 describe-load-balancers \
+  --region "$REGION" \
+  --query 'LoadBalancers[].LoadBalancerArn' \
+  --output text); do
+
+  echo "Deleting ALB/NLB: $lb"
+
+  aws elbv2 delete-load-balancer \
+    --load-balancer-arn "$lb" \
+    --region "$REGION" 2>/dev/null || true
+done
+
+
+# ==============================
+# 4. Delete Classic Load Balancers
+# ==============================
+for lb in $(aws elb describe-load-balancers \
+  --region "$REGION" \
+  --query 'LoadBalancerDescriptions[].LoadBalancerName' \
+  --output text); do
+
+  echo "Deleting Classic ELB: $lb"
+
+  aws elb delete-load-balancer \
+    --load-balancer-name "$lb" \
+    --region "$REGION" 2>/dev/null || true
+done
+
+
+# ==============================
+# 5. Get ALL non-default VPCs
+# ==============================
+VPCS=$(aws ec2 describe-vpcs \
+  --region "$REGION" \
+  --filters Name=is-default,Values=false \
+  --query 'Vpcs[].VpcId' \
+  --output text)
+
+
+# ==============================
+# 6. Cleanup every non-default VPC
+# ==============================
+for VPC in $VPCS; do
+
+  echo "======================================"
+  echo "Cleaning VPC: $VPC"
+  echo "======================================"
+
+  # ------------------------------
+  # NAT Gateways
+  # ------------------------------
+  for NAT in $(aws ec2 describe-nat-gateways \
+    --region "$REGION" \
+    --filter Name=vpc-id,Values="$VPC" \
+    --query 'NatGateways[?State!=`deleted`].NatGatewayId' \
+    --output text); do
+
+    echo "Deleting NAT Gateway: $NAT"
+
+    aws ec2 delete-nat-gateway \
+      --nat-gateway-id "$NAT" \
+      --region "$REGION" 2>/dev/null || true
+  done
+
+
+  # ------------------------------
+  # Subnets
+  # ------------------------------
+  for SUBNET in $(aws ec2 describe-subnets \
+    --region "$REGION" \
+    --filters Name=vpc-id,Values="$VPC" \
+    --query 'Subnets[].SubnetId' \
+    --output text); do
+
+    echo "Deleting subnet: $SUBNET"
+
+    aws ec2 delete-subnet \
+      --subnet-id "$SUBNET" \
+      --region "$REGION" 2>/dev/null || true
+  done
+
+
+  # ------------------------------
+  # Internet Gateways
+  # ------------------------------
+  for IGW in $(aws ec2 describe-internet-gateways \
+    --region "$REGION" \
+    --filters Name=attachment.vpc-id,Values="$VPC" \
+    --query 'InternetGateways[].InternetGatewayId' \
+    --output text); do
+
+    echo "Detaching IGW: $IGW"
+
+    aws ec2 detach-internet-gateway \
+      --internet-gateway-id "$IGW" \
+      --vpc-id "$VPC" \
+      --region "$REGION" 2>/dev/null || true
+
+    aws ec2 delete-internet-gateway \
+      --internet-gateway-id "$IGW" \
+      --region "$REGION" 2>/dev/null || true
+  done
+
+
+  # ------------------------------
+  # Route Tables
+  # ------------------------------
+  for RT in $(aws ec2 describe-route-tables \
+    --region "$REGION" \
+    --filters Name=vpc-id,Values="$VPC" \
+    --query 'RouteTables[].RouteTableId' \
+    --output text); do
+
+    echo "Deleting route table: $RT"
+
+    aws ec2 delete-route-table \
+      --route-table-id "$RT" \
+      --region "$REGION" 2>/dev/null || true
+  done
+
+
+  # ------------------------------
+  # Security Groups
+  # ------------------------------
+  for SG in $(aws ec2 describe-security-groups \
+    --region "$REGION" \
+    --filters Name=vpc-id,Values="$VPC" \
+    --query 'SecurityGroups[?GroupName!=`default`].GroupId' \
+    --output text); do
+
+    echo "Deleting security group: $SG"
+
+    aws ec2 delete-security-group \
+      --group-id "$SG" \
+      --region "$REGION" 2>/dev/null || true
+  done
+
+
+  # ------------------------------
+  # VPC
+  # ------------------------------
+  echo "Deleting VPC: $VPC"
+
+  aws ec2 delete-vpc \
+    --vpc-id "$VPC" \
+    --region "$REGION" 2>/dev/null || true
+
+done
+
+
+# ==============================
+# 7. Release unattached EIPs
+# ==============================
+for EIP in $(aws ec2 describe-addresses \
+  --region "$REGION" \
+  --query 'Addresses[?AssociationId==null].AllocationId' \
+  --output text); do
+
+  echo "Releasing EIP: $EIP"
+
+  aws ec2 release-address \
+    --allocation-id "$EIP" \
+    --region "$REGION" 2>/dev/null || true
+done
+
+
+echo "======================================"
+echo "CLEANUP FINISHED"
+echo "======================================"
+
+
+=================================================================================================
+=================================================================================
+
+
+
+علشان نحدد ال VPC اللي موجوده
+
+aws ec2 describe-vpcs \
+  --region us-east-1 \
+  --query "Vpcs[*].[VpcId,IsDefault,CidrBlock]" \
+  --output table
+==========================================================================
+
+  علشان نحدد جواهم موارد وللا لا (كل حاجه مرتبطه بالشبكه)
+  for vpc in vpc-033fd3ee9d65a2e72 vpc-07fbf3b42001949bb vpc-0787e222ddd99343a; do
+  echo "===== $vpc ====="
+  aws ec2 describe-subnets --region us-east-1 --filters Name=vpc-id,Values=$vpc --query 'Subnets[*].[SubnetId,CidrBlock]' --output table
+  aws ec2 describe-internet-gateways --region us-east-1 --filters Name=attachment.vpc-id,Values=$vpc --query 'InternetGateways[*].InternetGatewayId' --output table
+  aws ec2 describe-nat-gateways --region us-east-1 --filter Name=vpc-id,Values=$vpc --query 'NatGateways[*].[NatGatewayId,State]' --output table
+done
+==========================================================================
+علشان احذف الSUBNET
+aws ec2 delete-subnet --subnet-id subnet-0f2e8db840c282e08 --region us-east-1
+
+علي حسب ال SUBNET ID
+
+===========================================================================
+علشان نعمل detach for InternetGatewayId
+
+
+aws ec2 detach-internet-gateway \
+  --internet-gateway-id igw-007e9e282382b28cf \
+  --vpc-id vpc-033fd3ee9d65a2e72 \
+  --region us-east-1
+
+  ثم حذف 
+  aws ec2 delete-internet-gateway \
+  --internet-gateway-id igw-007e9e282382b28cf \
+  --region us-east-1
+
+  علي حسب ال vpc id , igw ID
+
+  ==========================================================================
+حذف ال vpc 
+
+aws ec2 delete-vpc \
+  --vpc-id vpc-033fd3ee9d65a2e72 \
+  --region us-east-1
+
+  ===============================================================
+  

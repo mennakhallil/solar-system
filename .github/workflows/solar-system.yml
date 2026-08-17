@@ -6,10 +6,71 @@ on:
   pull_request:
     branches:
       - develop
-
+env:
+  MONGO_URI: ${{ vars.MONGO_URI }}
+  MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
+  MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+  dockerhub_username: ${{ secrets.DOCKER_USERNAME }}
+  dockerhub_password: ${{ secrets.DOCKER_PASSWORD }}
 jobs:
   unit-tests:
+    name: Run unit tests
+    strategy:
+      matrix:
+        node-version: [16, 18]
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    environment: solar-system
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: install npm
+        run: npm install
+      - name: run unit test
+        run: npm test
+      - name: upload test results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: test-results
+          path: test-results.xml
+
+  code-covarage:
+    name: Run code coverage
+    needs: unit-tests
+    strategy:
+      matrix:
+        node-version: [16, 18]
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    environment: solar-system
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: install npm
+        run: npm install
+      - name: run code coverage
+        continue-on-error: true
+        run: npm run coverage
+      - name: upload code coverage results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: code-coverage-results
+          path: coverage
+  docker:
+    name: Build and push docker image
+    needs: code-covarage
     runs-on: ubuntu-latest
+    environment: solar-system
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -19,6 +80,120 @@ jobs:
           node-version: 24
       - name: install npm
         run: npm install
-      - name: run unit tests
-        run: npm test
-     
+      - name: login to docker hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/solar-system:${{ github.sha }}
+
+      - name: docker test
+        env:
+          MONGO_URI: ${{ vars.MONGO_URI }}
+          MONGO_USERNAME: ${{ vars.MONGO_USERNAME }}
+          MONGO_PASSWORD: ${{ secrets.MONGO_PASSWORD }}
+          DOCKERS_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+         chmod +x ./docker-script.sh
+         ./docker-script.sh
+  terraform:
+    name: Terraform
+    needs: docker
+    runs-on: ubuntu-latest
+    environment: solar-system
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: "1.14.6"
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: terraform init
+        working-directory: ./terraform
+        run: terraform init
+      - name: terraform plan
+        working-directory: ./terraform
+        run: terraform plan
+      - name: terraform validate
+        working-directory: ./terraform
+        run: terraform validate
+      - name: terraform fmt
+        working-directory: ./terraform
+        run: terraform fmt -check
+  k8s:
+    name: Deploy to Kubernetes
+    needs: terraform
+    runs-on: ubuntu-latest
+    environment: solar-system
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Install eksctl
+        run: |
+              curl --silent --location "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
+              sudo mv /tmp/eksctl /usr/local/bin/eksctl
+              eksctl version
+
+      - name: create eks cluster
+        run: |
+            eksctl create cluster \
+            --name solar-cluster \
+            --region us-east-1 \
+            --vpc-public-subnets "$PUBLIC_SUBNETS" \
+            --vpc-private-subnets "$PRIVATE_SUBNETS" \
+            --nodegroup-name solar-nodes \
+            --node-type t3.micro \
+            --nodes 2 \
+            --nodes-min 1 \
+            --nodes-max 3 \
+            --managed
+
+      - name: get kubeconfig
+        run: |
+          mkdir -p ~/.kube
+
+          aws eks update-kubeconfig --name solar-cluster  --region us-east-1
+      - name: Check EKS
+        run: kubectl get nodes
+      
+      - name: create namespace
+        run: |
+              export NAMESPACE="${{ vars.NAMESPACE }}"
+              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+
+      - name: deploy to kubernetes
+        run: |
+              export REPLICAS="${{ vars.REPLICAS }}"
+              export NAMESPACE="${{ vars.NAMESPACE }}"
+              export K8S_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/solar-system:${GITHUB_SHA}"
+              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f
+              envsubst < ./kubernetes/development/deployment.yaml > /tmp/deployment.yaml
+              envsubst < ./kubernetes/development/service.yaml > /tmp/service.yaml
+              kubectl apply -f /tmp/deployment.yaml
+              kubectl apply -f /tmp/service.yaml
+
+
