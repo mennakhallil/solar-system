@@ -178,19 +178,12 @@ jobs:
           aws eks update-kubeconfig --name solar-cluster  --region us-east-1
       - name: Check EKS
         run: kubectl get nodes
-      
-      - name: create namespace
-        run: |
-              export NAMESPACE="${{ vars.NAMESPACE }}"
-              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-
-
       - name: deploy to kubernetes
         run: |
               export REPLICAS="${{ vars.REPLICAS }}"
               export NAMESPACE="${{ vars.NAMESPACE }}"
               export K8S_IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/solar-system:${GITHUB_SHA}"
-              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f
+              kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
               envsubst < ./kubernetes/development/deployment.yaml > /tmp/deployment.yaml
               envsubst < ./kubernetes/development/service.yaml > /tmp/service.yaml
               kubectl apply -f /tmp/deployment.yaml
